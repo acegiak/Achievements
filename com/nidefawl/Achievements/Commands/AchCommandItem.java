@@ -33,6 +33,7 @@ public class AchCommandItem {
 		}
 		return true;
 	}
+	@SuppressWarnings("deprecation")
 	protected static boolean handleCommand(Achievements plugin,Player player, String[] s) {
 		int item, amount;
 		if (s.length < 3) {

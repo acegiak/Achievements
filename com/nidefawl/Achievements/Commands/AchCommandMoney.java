@@ -6,7 +6,7 @@ import org.bukkit.plugin.Plugin;
 import com.nidefawl.Achievements.Achievements;
 import com.nidefawl.Achievements.Messaging.AchMessaging;
 import com.nidefawl.MyGeneral.types.MyGUser;
-import com.nijikokun.bukkit.iConomy.iConomy;
+import com.nijiko.coelho.iConomy.iConomy;
 
 public class AchCommandMoney {
 
@@ -27,15 +27,18 @@ public class AchCommandMoney {
 			Achievements.LogError("Bad command '"+s[0]+" "+s[1]+" "+s[2]+"'(amount is not a number) correct is: money amount");
 			return false;
 		}
-		String currency = iConomy.currency;;
+		String currency = iConomy.getBank().getCurrency();
 		if (plugin.myGeneral() != null) {
 			MyGUser myGPlayer = plugin.myGeneral().getDataSource().getPlayer(player.getName());
 			myGPlayer.addToBalance(amount);
+			
 		}
 		else
 		{
-			int current_balance = iConomy.db.get_balance(player.getName());
-			iConomy.db.set_balance(player.getName(),current_balance+amount);
+			if(iConomy.getBank().getAccount(player.getName())!=null) {
+				iConomy.getBank().getAccount(player.getName()).add(amount);
+				iConomy.getBank().getAccount(player.getName()).save();
+			}
 		}
 		if(amount>0)
 			AchMessaging.send(player,plugin.color + "Reward: &f"+amount+" &2"+currency);

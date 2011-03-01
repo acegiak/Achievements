@@ -14,10 +14,10 @@ import java.io.File;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
+import org.anjocaido.groupmanager.GroupManager;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.entity.CraftArrow;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
@@ -42,7 +42,7 @@ public class Achievements extends JavaPlugin {
 	public boolean enabled = false;
 	public boolean useSQL = false;
 	public boolean useCraftIRC = false;
-	public final static String version = "0.54";
+	public final static String version = "0.6";
 	public final static String logprefix = "[Achievements-" + version + "]";
 	private final static Yaml yaml = new Yaml(new SafeConstructor());
 	private String name = "Achievements";
@@ -57,6 +57,7 @@ public class Achievements extends JavaPlugin {
 	public List<String> formatAchList = new ArrayList<String>();
 	public String formatAchNotifyBroadcast = "+playername has been awarded +achname!";
 	public String formatAchNotifyPlayer = null;
+	public ArrayList<String> ircTags = new ArrayList<String>();
 	protected final Object achsLock = new Object();
 	public int achsPerPage = 8;
 
@@ -100,6 +101,9 @@ public class Achievements extends JavaPlugin {
 	    this.obtainedColor = ("&" + properties.getString("achievements-obtainedcolor", "a", ""));
 	    this.useSQL = properties.getBoolean("achievements-use-sql", false, "");
 	    this.useCraftIRC = properties.getBoolean("achievements-craftirc", CheckCraftIRC(), "");
+	/*	for(String tag : properties.getString("achievements-craftirc-tags", "admin,defaul", "").split(",")) {
+			ircTags.add(tag.trim());
+		}*/
 	    this.achsPerPage = properties.getInt("achievements-list-perpage", 8, "");
 		this.formatAchNotifyBroadcast = properties.getString("achievements-format-notifybroadcast", "&b+playername has been awarded +achname!", "check documentation for details");
 		this.formatAchNotifyPlayer = properties.getString("achievements-format-notifyplayer", "(+description)", "");
@@ -117,7 +121,7 @@ public class Achievements extends JavaPlugin {
 		
 		
 		if (!CheckStatsPlugin()) {
-			onDisable();
+			Disable();
 			return false;	
 		}
 		if (useCraftIRC && getServer().getPluginManager().getPlugin("CraftIRC") == null) {
@@ -154,6 +158,8 @@ public class Achievements extends JavaPlugin {
 		return -1;
 	}
 	public void onEnable() {
+	}
+	public void Enable() {
 		formatAchDetail = new ArrayList<String>();
 		formatAchList = new ArrayList<String>();
 		achievementList = new HashMap<String, AchievementListData>();
@@ -197,7 +203,6 @@ public class Achievements extends JavaPlugin {
 		}
 		getServer().getScheduler().scheduleAsyncRepeatingTask(this, new CheckerTask(this), delay*20, delay*20);
 	}
-
 	private static class CheckerTask implements Runnable {
 		private Achievements achievements;
 
@@ -209,13 +214,11 @@ public class Achievements extends JavaPlugin {
 			achievements.checkAchievements();
 		}
 	}
-
-	public void onDisable() {
-		if (enabled)
-			checkAchievements();
+	public void Disable() {
+		checkAchievements();
+		enabled = false;
 		getServer().getScheduler().cancelTasks(this);
 		playerAchievements = null;
-		enabled = false;
 		try {
 			if(conn!=null)
 			conn.close();
@@ -224,6 +227,9 @@ public class Achievements extends JavaPlugin {
 			e.printStackTrace();
 		}
 		log.info(logprefix + " " + name + " " + version + " Plugin Disabled");
+	}
+
+	public void onDisable() {
 	}
 
 	public void initialize() {
@@ -399,8 +405,8 @@ public class Achievements extends JavaPlugin {
 			}
 
 			enabled = false;
-			onDisable();
-			onEnable();
+			Disable();
+			Enable();
 			CheckMyGeneral();
 			AchMessaging.send(player, ChatColor.LIGHT_PURPLE + "Achievements reloaded.");
 			return true;
@@ -491,5 +497,26 @@ public class Achievements extends JavaPlugin {
 	}
 	public static void LogError(String string) {
 		Achievements.log.log(Level.SEVERE, Achievements.logprefix + " " + string);
+	}
+	public static void LogInfo(String string) {
+		Achievements.log.log(Level.INFO, Achievements.logprefix + " " + string);
+	}
+
+
+	private GroupManager groupManagerInstance = null;
+	boolean CheckGroupManager() {
+		if (groupManagerInstance != null)
+			return true;
+		Plugin plug = this.getServer().getPluginManager().getPlugin("GroupManager");
+		if (plug != null) {
+			groupManagerInstance = (GroupManager) plug;
+			log.info(logprefix + " Found supported plugin: " + plug.getDescription().getName());
+			return true;
+		}
+		return false;
+	}
+	public GroupManager groupManager() {
+		CheckGroupManager();
+		return groupManagerInstance;
 	}
 }

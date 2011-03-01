@@ -6,6 +6,9 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.anjocaido.groupmanager.data.Group;
+import org.anjocaido.groupmanager.data.User;
 import org.bukkit.entity.Player;
 import org.yaml.snakeyaml.reader.UnicodeReader;
 
@@ -27,22 +30,25 @@ public class AchCommandGroup {
 			} else {
 				plugin.myGeneral().getDataSource().addPlayer(myGPlayer);	
 			}
-			
-			if (!plugin.myGeneral().getDataSource().doesPlayerExist(player.getName())) {
-				plugin.myGeneral().getDataSource().addPlayer(myGPlayer);
-			} else {
-				plugin.myGeneral().getDataSource().modifyPlayer(myGPlayer);
+			return true;
+		}
+		else if (plugin.groupManager() != null) {
+			User grpUser = plugin.groupManager().getData().getUser(player.getName());
+			Group newGrp = plugin.groupManager().getData().getGroup(s[1]);
+			if(grpUser!=null&&newGrp!=null) {
+				grpUser.setGroup(newGrp);
+			}
+			return true;
+		} else {
+			try {
+				ModifyGroup(player,s[1]);
+				plugin.Stats().ReloadPerms();
+			} catch (Exception e) {
+				Achievements.LogError("group command failed: " +e.getMessage());
+				return false;
 			}
 			return true;
 		}
-		try {
-			ModifyGroup(player,s[1]);
-			plugin.Stats().ReloadPerms();
-		} catch (Exception e) {
-			Achievements.LogError("group command failed: " +e.getMessage());
-			return false;
-		}
-		return true;
 	}	
 	@SuppressWarnings("unchecked")
 	public static void ModifyGroup(Player player, String newGroup) throws Exception

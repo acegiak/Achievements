@@ -4,7 +4,7 @@ import java.util.logging.Logger;
 import java.util.ArrayList;
 import org.bukkit.entity.Player;
 import com.nidefawl.Achievements.Achievements;
-import com.nidefawl.Stats.Stats;
+import com.nidefawl.Stats.StatsSettings;
 
 
 public class AchCommandHandler {
@@ -78,24 +78,24 @@ public class AchCommandHandler {
 
 		for (String[] s : commandList) {
 			if (s[0].equalsIgnoreCase("item")) {
-				Stats.LogInfo("giving an item ("+s[0]+")");
+				if(StatsSettings.debugOutput) Achievements.LogInfo("giving '"+player.getName()+"' item ("+s[0]+")");
 				AchCommandItem.handleCommand(plugin,player,s);
 				continue;
 			}
 
 			if (s[0].equalsIgnoreCase("group")) {
-				Stats.LogInfo("giving a group ("+s[0]+")");
+				if(StatsSettings.debugOutput) Achievements.LogInfo("adding '"+player.getName()+"' to group ("+s[0]+")");
 				AchCommandGroup.handleCommand(plugin, player, s);
 				continue;
 			}
 
 			if (s[0].equalsIgnoreCase("money")) {
-				Stats.LogInfo("giving money ("+s[0]+")");
+				if(StatsSettings.debugOutput) Achievements.LogInfo("giving '"+player.getName()+"' money ("+s[0]+")");
 				AchCommandMoney.handleCommand(plugin, player, s);
 				continue;
 			}
 			if (s[0].equalsIgnoreCase("warp")) {
-				Stats.LogInfo("giving warp ("+s[0]+")");
+				if(StatsSettings.debugOutput) Achievements.LogInfo("warping '"+player.getName()+"' to ("+s[0]+")");
 				AchCommandWarp.handleCommand(plugin, player, s);
 				continue;
 			}
