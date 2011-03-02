@@ -42,7 +42,7 @@ public class Achievements extends JavaPlugin {
 	public boolean enabled = false;
 	public boolean useSQL = false;
 	public boolean useCraftIRC = false;
-	public final static String version = "0.6";
+	public final static String version = "0.54";
 	public final static String logprefix = "[Achievements-" + version + "]";
 	private final static Yaml yaml = new Yaml(new SafeConstructor());
 	private String name = "Achievements";
@@ -101,9 +101,9 @@ public class Achievements extends JavaPlugin {
 	    this.obtainedColor = ("&" + properties.getString("achievements-obtainedcolor", "a", ""));
 	    this.useSQL = properties.getBoolean("achievements-use-sql", false, "");
 	    this.useCraftIRC = properties.getBoolean("achievements-craftirc", CheckCraftIRC(), "");
-	/*	for(String tag : properties.getString("achievements-craftirc-tags", "admin,defaul", "").split(",")) {
+		for(String tag : properties.getString("achievements-craftirc-tags", "admin,defaul", "").split(",")) {
 			ircTags.add(tag.trim());
-		}*/
+		}
 	    this.achsPerPage = properties.getInt("achievements-list-perpage", 8, "");
 		this.formatAchNotifyBroadcast = properties.getString("achievements-format-notifybroadcast", "&b+playername has been awarded +achname!", "check documentation for details");
 		this.formatAchNotifyPlayer = properties.getString("achievements-format-notifyplayer", "(+description)", "");
