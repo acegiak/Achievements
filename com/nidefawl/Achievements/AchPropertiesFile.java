@@ -1,4 +1,5 @@
 package com.nidefawl.Achievements;
+
 import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
@@ -9,8 +10,8 @@ public class AchPropertiesFile {
 	private HashMap<String, PropertiesEntry> map;
 	private File file;
 	private boolean modified;
-	static final Logger log	= Logger.getLogger("Minecraft");
-	public final String logprefix = "[Achievements-"+Achievements.version+"]";
+	static final Logger log = Logger.getLogger("Minecraft");
+	public final String logprefix = "[Achievements-" + Achievements.version + "]";
 
 	public AchPropertiesFile(File file) {
 		this.file = file;
@@ -24,9 +25,9 @@ public class AchPropertiesFile {
 				String line = scan.nextLine();
 				if (!line.contains("="))
 					continue;
-				if(line.length()==0)
+				if (line.length() == 0)
 					continue;
-				if(line.trim().charAt(0)=='#')
+				if (line.trim().charAt(0) == '#')
 					continue;
 				int equals = line.indexOf("=");
 				int commentIndex = line.length();
@@ -100,8 +101,10 @@ public class AchPropertiesFile {
 			return defaultValue;
 		}
 	}
+
 	public void save() {
-		if(!modified) return;
+		if (!modified)
+			return;
 		BufferedWriter bwriter = null;
 		FileWriter fwriter = null;
 		try {
@@ -110,11 +113,12 @@ public class AchPropertiesFile {
 			fwriter = new FileWriter(file);
 			bwriter = new BufferedWriter(fwriter);
 			SortedSet<Map.Entry<String, PropertiesEntry>> results = new TreeSet<Map.Entry<String, PropertiesEntry>>(new Comparator<Map.Entry<String, PropertiesEntry>>() {
-			    public int compare(Map.Entry<String, PropertiesEntry> a, Map.Entry<String, PropertiesEntry> b) {
-			        //int d = a.getValue().compareTo(b.getValue());
-			        int d = a.getKey().compareTo(b.getKey());
-			        return d;
-			    }
+				@Override
+				public int compare(Map.Entry<String, PropertiesEntry> a, Map.Entry<String, PropertiesEntry> b) {
+					// int d = a.getValue().compareTo(b.getValue());
+					int d = a.getKey().compareTo(b.getKey());
+					return d;
+				}
 
 			});
 			results.addAll(map.entrySet());
@@ -123,7 +127,7 @@ public class AchPropertiesFile {
 				builder.append(entry.getKey());
 				builder.append(" = ");
 				builder.append(entry.getValue().value);
-				if(!entry.getValue().comment.equals("")) {
+				if (!entry.getValue().comment.equals("")) {
 					builder.append("   #");
 					builder.append(entry.getValue().comment);
 				}
@@ -138,7 +142,8 @@ public class AchPropertiesFile {
 				if (bwriter != null) {
 					bwriter.flush();
 					bwriter.close();
-				} if (fwriter != null) {
+				}
+				if (fwriter != null) {
 					fwriter.close();
 				}
 			} catch (IOException e) {

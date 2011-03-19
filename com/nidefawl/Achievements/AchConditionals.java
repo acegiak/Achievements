@@ -1,23 +1,21 @@
 package com.nidefawl.Achievements;
+
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
-public class AchConditionals
-{
+public class AchConditionals {
 	private boolean empty;
 	protected ArrayList<String> condList = new ArrayList<String>();
 
-   static final Logger log = Logger.getLogger("Minecraft");
+	static final Logger log = Logger.getLogger("Minecraft");
 
-	AchConditionals(Achievements plugin,String conditions)
-	{
+	AchConditionals(Achievements plugin, String conditions) {
 		this.empty = true;
 		if (conditions == null)
 			return;
-		
+
 		String[] split = conditions.split(";");
-		for (String c: split)
-		{
+		for (String c : split) {
 			if (c.length() <= 1)
 				continue;
 			this.condList.add(c);
@@ -25,42 +23,34 @@ public class AchConditionals
 		}
 	}
 
-	public boolean isEmpty()
-	{
+	public boolean isEmpty() {
 		return this.empty;
 	}
 
-	public boolean meets(Achievements plugin, PlayerAchievement pa)
-	{
+	public boolean meets(Achievements plugin, PlayerAchievement pa) {
 		if (isEmpty())
 			return true;
 
 		boolean meets = false;
-					
-		for (String c: condList)
-		{
+
+		for (String c : condList) {
 			String cond;
 			boolean not = false;
-			if (c.startsWith("!"))
-			{
+			if (c.startsWith("!")) {
 				not = true;
 				cond = c.substring(1);
-			}
-			else
-			{
+			} else {
 				cond = c;
 			}
 			AchievementListData ach = plugin.getAchievement(cond);
-			if (ach == null||pa==null)
+			if (ach == null || pa == null)
 				continue;
-				
-			if (!not && pa.hasAchievement(ach))
-			{
+
+			if (!not && pa.hasAchievement(ach)) {
 				meets = true;
 				continue;
 			}
-			if (not && !pa.hasAchievement(ach))
-			{
+			if (not && !pa.hasAchievement(ach)) {
 				meets = true;
 				continue;
 			}
@@ -71,16 +61,15 @@ public class AchConditionals
 		return meets;
 	}
 
-	public String toString()
-	{
+	@Override
+	public String toString() {
 		boolean second = false;
-		
+
 		if (isEmpty())
 			return "";
-	
+
 		String ret = "";
-		for (String s: condList)
-		{
+		for (String s : condList) {
 			if (second)
 				ret = ret + ";";
 			ret = ret + s;

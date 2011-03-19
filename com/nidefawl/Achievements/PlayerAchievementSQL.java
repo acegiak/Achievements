@@ -1,4 +1,5 @@
 package com.nidefawl.Achievements;
+
 import java.util.Iterator;
 import java.util.logging.Logger;
 import java.util.logging.Level;
@@ -6,14 +7,15 @@ import java.sql.*;
 
 public class PlayerAchievementSQL extends PlayerAchievement {
 	static final Logger log = Logger.getLogger("Minecraft");
-	public final String logprefix = "[Achievements-"+Achievements.version+"]";
+	public final String logprefix = "[Achievements-" + Achievements.version + "]";
 	private Achievements plugin = null;
+
 	PlayerAchievementSQL(String name, Achievements plugin) {
 		super(name);
 		this.plugin = plugin;
 	}
 
-
+	@Override
 	protected void save() {
 
 		Connection conn = null;
@@ -30,8 +32,7 @@ public class PlayerAchievementSQL extends PlayerAchievement {
 				if (!ach.modified)
 					continue;
 
-				ps = conn.prepareStatement("INSERT INTO " + plugin.dbTable + " (player,achievement,count) VALUES(?,?,?) ON DUPLICATE KEY UPDATE count=?",
-						Statement.RETURN_GENERATED_KEYS);
+				ps = conn.prepareStatement("INSERT INTO " + plugin.dbPlayerAchievementsTable + " (player,achievement,count) VALUES(?,?,?) ON DUPLICATE KEY UPDATE count=?", Statement.RETURN_GENERATED_KEYS);
 				ps.setString(1, name);
 				ps.setString(2, achName);
 				ps.setInt(3, ach.getCount());
@@ -53,6 +54,7 @@ public class PlayerAchievementSQL extends PlayerAchievement {
 		}
 	}
 
+	@Override
 	protected void load() {
 
 		Connection conn = null;
@@ -61,7 +63,7 @@ public class PlayerAchievementSQL extends PlayerAchievement {
 
 		try {
 			conn = plugin.getSQLConnection();
-			ps = conn.prepareStatement("SELECT * from " + plugin.dbTable + " where player = ?", Statement.RETURN_GENERATED_KEYS);
+			ps = conn.prepareStatement("SELECT * from " + plugin.dbPlayerAchievementsTable + " where player = ?");
 			ps.setString(1, name);
 			rs = ps.executeQuery();
 			while (rs.next())
