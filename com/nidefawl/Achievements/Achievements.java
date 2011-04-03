@@ -44,7 +44,7 @@ public class Achievements extends JavaPlugin {
 	public boolean enabled = false;
 	public boolean useSQL = false;
 	public boolean useCraftIRC = false;
-	public final static double version = 0.96D;
+	public final static Double version = 0.972;
 	public final static String logprefix = "[Achievements-" + version + "]";
 	private final static Yaml yaml = new Yaml(new SafeConstructor());
 	private String name = "Achievements";
@@ -65,7 +65,9 @@ public class Achievements extends JavaPlugin {
 	public static String dbAchievementsTable;
 	private boolean allowConsoleCommands = false;
 	public static boolean useSQLDefinitions = false;
-
+	public final static Double getVersion() {
+		return version;
+	}
 	protected class AchievementsServerListener extends ServerListener {
 		Achievements plugin = null;
 
