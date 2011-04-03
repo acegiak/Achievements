@@ -44,7 +44,7 @@ public class Achievements extends JavaPlugin {
 	public boolean enabled = false;
 	public boolean useSQL = false;
 	public boolean useCraftIRC = false;
-	public final static double version = 0.9D;
+	public final static double version = 0.96D;
 	public final static String logprefix = "[Achievements-" + version + "]";
 	private final static Yaml yaml = new Yaml(new SafeConstructor());
 	private String name = "Achievements";
