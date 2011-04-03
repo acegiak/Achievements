@@ -33,9 +33,8 @@ public class AchCommandGroup {
 				return false;
 			}
 			return true;
-		}
+		} 
 	}
-
 	@SuppressWarnings("unchecked")
 	public static void ModifyGroup(Player player, String newGroup) throws Exception {
 		Map<String, Object> data;

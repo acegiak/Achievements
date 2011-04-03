@@ -6,21 +6,16 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 
 public class PlayerAchievementFile extends PlayerAchievement {
 	private String location;
-	public final String logprefix = "[Achievements-" + Achievements.version + "]";
-	static final Logger log = Logger.getLogger("Minecraft");
-
-	PlayerAchievementFile(String directory, String name) {
+	public PlayerAchievementFile(String directory, String name) {
 		super(name);
 		this.location = directory + File.separator + name + ".txt";
 	}
 
 	@Override
-	protected void save() {
+	public void save() {
 		BufferedWriter writer = null;
 		try {
 			writer = new BufferedWriter(new FileWriter(location));
@@ -35,20 +30,20 @@ public class PlayerAchievementFile extends PlayerAchievement {
 				writer.newLine();
 			}
 		} catch (Exception e) {
-			log.log(Level.SEVERE, logprefix + " Exception while creating " + location, e);
+			Achievements.LogError("Exception while creating " + location +" "+ e);
 		} finally {
 			try {
 				if (writer != null) {
 					writer.close();
 				}
 			} catch (IOException e) {
-				log.log(Level.SEVERE, logprefix + " Exception while closing " + location, e);
+				Achievements.LogError("Exception while closing " + location +" "+ e);
 			}
 		}
 	}
 
 	@Override
-	protected void load() {
+	public void load() {
 		if (!new File(location).exists())
 			return;
 
@@ -61,7 +56,7 @@ public class PlayerAchievementFile extends PlayerAchievement {
 
 				String[] split = line.split(":");
 				if (split.length < 1) {
-					log.log(Level.SEVERE, logprefix + " Malformed line (" + line + ") in " + location);
+					Achievements.LogError("Malformed line (" + line + ") in " + location);
 					continue;
 				}
 
@@ -74,7 +69,7 @@ public class PlayerAchievementFile extends PlayerAchievement {
 			}
 			scanner.close();
 		} catch (Exception ex) {
-			log.log(Level.SEVERE, logprefix + " Exception	while	reading " + location, ex);
+			Achievements.LogError("Exception	while	reading " + location +" "+ ex);
 		}
 	}
 }

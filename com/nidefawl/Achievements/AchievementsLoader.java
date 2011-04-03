@@ -9,7 +9,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Scanner;
-import java.util.logging.Level;
+
+import com.nidefawl.Stats.datasource.StatsSQLConnectionManager;
 
 public class AchievementsLoader {
 
@@ -39,7 +40,7 @@ public class AchievementsLoader {
 					writer.write("1:Sup Creeper!:1:damagetaken:Creeper:10: Take 10 creeper damage:item bread 2\r\n");
 					writer.write("1:Invisible Mobs!:1:damagetaken:Creeper:20: Take 20 creeper damage:item bread 2:Sup Creeper!\r\n");
 					writer.write("1:Fucking Creepers...:1:damagetaken:Creeper:40: Take 40 creeper damage:item bread 2:Invisible Mobs!\r\n");
-					writer.write("1:It was lag:1:deaths:total:50:Die a lot:item ironboots 1\r\n");
+					writer.write("1:It was lag:1:deaths:total:50:Die a lot \\:P <colon>D:item ironboots 1;addpermission worldguard.heal.self;/god *\r\n");
 					writer.write("1:You talk too fucking much:1:stats:chatletters:20000:Awarded for typing 20k chat letters!:item diamondboots 1\r\n");
 					writer.write("1:You talk way too fucking much:1:stats:chatletters:30000:Awarded for typing 30k chat letters!:item goldpickaxe 1\r\n");
 					writer.write("1:You really talk way too fucking much:1:stats:chatletters:40000:Awarded for typing 40k chat letters!:item diamondpants 1\r\n");
@@ -88,18 +89,20 @@ public class AchievementsLoader {
 					writer.write("1:There's issue with the circuit:1:blockdestroy:redstonewire:50:Ah, there we go.:item redstonewire 64\r\n");
 					writer.write("1:Welcome Visit:1:stats:login:1:Joined this server for the first time:money 1000\r\n");
 					writer.write("1:Treekiller!:1:blockdestroy:log:5:Destroyed 5 logs:money -100\r\n");
+					writer.write("1:Respect the Environment!:1:stats:lighter:10:You light up everything :/kick *:!group VIP+;Global Warming\r\n");
+					writer.write("1:I'm safe for the night:1:blockcreate:torch:5:Its getting dark...:/time set 13500\r\n");
 				} catch (Exception e) {
-					Achievements.log.log(Level.SEVERE, "Exception while creating " + listLocation, e);
+					Achievements.LogError("Exception while creating " + listLocation+" "+e);
 				} finally {
 					try {
 						if (writer != null) {
 							writer.close();
 						}
 					} catch (IOException e) {
-						Achievements.log.log(Level.SEVERE, "Exception while closing writer for " + listLocation, e);
+						Achievements.LogError("Exception while closing writer for " + listLocation+" "+e);
 					}
 				}
-				Achievements.log.info(Achievements.logprefix + " created default " + listLocation);
+				Achievements.LogInfo("created default list " + listLocation);
 			}
 			String line = "";
 			try {
@@ -109,13 +112,18 @@ public class AchievementsLoader {
 					if (line.startsWith("#") || line.equals(""))
 						continue;
 					if (!(line.startsWith("0") || line.startsWith("1"))) {
-						Achievements.log.log(Level.SEVERE, Achievements.logprefix + " Malformed line, does not start with 0 or 1 (check whitspaces) (" + line + ") in " + listLocation);
+						Achievements.LogError("Malformed line, does not start with 0 or 1 (check whitspaces) (" + line + ") in " + listLocation);
 						continue;
 					}
+					line = line.replaceAll("\\\\:", "<colon>");
+					line = line.replaceAll("\\\\;", "<semicolon>");
 					String[] split = line.split(":");
 					if (split.length < 7) {
-						Achievements.log.log(Level.SEVERE, Achievements.logprefix + " Malformed line, not enough fields (" + line + ") in " + listLocation);
+						Achievements.LogError("Malformed line, not enough fields (" + line + ") in " + listLocation);
 						continue;
+					}
+					for(int i=0;i<split.length;i++) {
+						split[i] = split[i].replaceAll("<colon>", ":");
 					}
 					int enabled = Integer.parseInt(split[0]);
 					int maxawards = Integer.parseInt(split[2]);
@@ -142,15 +150,15 @@ public class AchievementsLoader {
 			ResultSet rs = null;
 
 			try {
-				conn = plugin.getSQLConnection();
-				ps = conn.prepareStatement("SELECT * from " + plugin.dbAchievementsTable);
+				conn = StatsSQLConnectionManager.getConnection(true);
+				ps = conn.prepareStatement("SELECT * from " + Achievements.dbAchievementsTable);
 				rs = ps.executeQuery();
 				while (rs.next()) {
 					AchievementListData achEntry = new AchievementListData(plugin, rs.getInt("enabled"), rs.getString("name"), rs.getInt("maxawards"), rs.getString("category"), rs.getString("stat"), rs.getInt("value"), rs.getString("description"), rs.getString("commands"), rs.getString("conditions"));
 					achievementList.put(rs.getString("name"), achEntry);
 				}
 			} catch (SQLException ex) {
-				Achievements.LogError("SQL exception while loading Achievements from table " + plugin.dbAchievementsTable + ": " + ex);
+				Achievements.LogError("SQL exception while loading Achievements from table " + Achievements.dbAchievementsTable + ": " + ex);
 			} finally {
 				try {
 					if (rs != null)
@@ -160,20 +168,23 @@ public class AchievementsLoader {
 					if (conn != null)
 						conn.close();
 				} catch (SQLException ex) {
-					Achievements.LogError("SQL exception (on close) while loading Achievements from table " + plugin.dbAchievementsTable + ": " + ex);
+					Achievements.LogError("SQL exception (on close) while loading Achievements from table " + Achievements.dbAchievementsTable + ": " + ex);
 				}
 			}
 		}
 		for (AchievementListData check : achievementList.values()) {
 			if (!check.commands.preCheck()) {
-				Achievements.log.info(Achievements.logprefix + " Disabling achievement '" + check.getName() + "'...");
+				Achievements.LogInfo("Disabling achievement '" + check.getName() + "'...");
 				check.setEnabled(false);
 			}
 			if (check.conditions.isEmpty())
 				continue;
 			for (String cond : check.conditions.condList) {
+				if(cond.startsWith("!")) cond = cond.substring(1);
+				if(cond.startsWith("group ")) continue;
+				if(cond.startsWith("permission ")) continue;
 				if (!achievementList.containsKey(cond)) {
-					Achievements.log.info(Achievements.logprefix + " Condition '" + cond + "' not found! Disabling achievement '" + check.getName() + "'...");
+					Achievements.LogInfo("Condition '" + cond + "' not found! Disabling achievement '" + check.getName() + "'...");
 					check.setEnabled(false);
 				}
 			}

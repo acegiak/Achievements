@@ -1,6 +1,7 @@
 name: Achievements
 main: com.nidefawl.Achievements.Achievements
-version: 0.54
+author: nidefawl
+version: 0.9
 commands:
     listachievements:
         description: Lists loaded achievements

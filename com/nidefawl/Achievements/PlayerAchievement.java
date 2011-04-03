@@ -5,16 +5,16 @@ import java.util.Iterator;
 import java.util.logging.Logger;
 
 public abstract class PlayerAchievement {
-	protected String name;
+	public String name;
 	public HashMap<String, Achievement> achievements;
 	static final Logger log = Logger.getLogger("Minecraft");
 
-	PlayerAchievement(String name) {
+	public PlayerAchievement(String name) {
 		this.name = name;
 		this.achievements = new HashMap<String, Achievement>();
 	}
 
-	protected boolean isEmpty() {
+	public boolean isEmpty() {
 		return achievements.isEmpty();
 	}
 
@@ -33,13 +33,13 @@ public abstract class PlayerAchievement {
 		return null;
 	}
 
-	protected Achievement newAchievement(String name) {
+	public Achievement newAchievement(String name) {
 		Achievement achievement = new Achievement();
 		achievements.put(name, achievement);
 		return achievement;
 	}
 
-	protected void award(String achievement) {
+	public void award(String achievement) {
 		Achievement ach;
 		if (!achievements.containsKey(achievement))
 			ach = newAchievement(achievement);
@@ -49,7 +49,7 @@ public abstract class PlayerAchievement {
 		ach.incrementCount();
 	}
 
-	protected void put(String achievement, int count) {
+	public void put(String achievement, int count) {
 		Achievement ach;
 		if (!achievements.containsKey(achievement))
 			ach = newAchievement(achievement);
@@ -59,13 +59,13 @@ public abstract class PlayerAchievement {
 		ach.put(count);
 	}
 
-	protected boolean hasAchievement(AchievementListData ach) {
+	public boolean hasAchievement(AchievementListData ach) {
 		if (achievements.containsKey(ach.getName()))
 			return true;
 		return false;
 	}
 
-	protected void copy(PlayerAchievement from) {
+	public void copy(PlayerAchievement from) {
 		this.name = from.name;
 		this.achievements = new HashMap<String, Achievement>(from.achievements);
 	}
@@ -80,7 +80,7 @@ public abstract class PlayerAchievement {
 		return this.achievements.size();
 	}
 
-	protected abstract void save();
+	public abstract void save();
 
-	protected abstract void load();
+	public abstract void load();
 }

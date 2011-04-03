@@ -20,9 +20,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
-import org.bukkit.event.player.PlayerEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerListener;
-import org.bukkit.event.server.PluginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.event.server.ServerListener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -43,7 +44,7 @@ public class Achievements extends JavaPlugin {
 	public boolean enabled = false;
 	public boolean useSQL = false;
 	public boolean useCraftIRC = false;
-	public final static String version = "0.8";
+	public final static double version = 0.9D;
 	public final static String logprefix = "[Achievements-" + version + "]";
 	private final static Yaml yaml = new Yaml(new SafeConstructor());
 	private String name = "Achievements";
@@ -60,11 +61,12 @@ public class Achievements extends JavaPlugin {
 	public ArrayList<String> ircTags = new ArrayList<String>();
 	protected final Object achsLock = new Object();
 	public int achsPerPage = 8;
-	protected String dbPlayerAchievementsTable;
-	protected String dbAchievementsTable;
-	static boolean useSQLDefinitions;
+	public static String dbPlayerAchievementsTable;
+	public static String dbAchievementsTable;
+	private boolean allowConsoleCommands = false;
+	public static boolean useSQLDefinitions = false;
 
-	private class AchievementsServerListener extends ServerListener {
+	protected class AchievementsServerListener extends ServerListener {
 		Achievements plugin = null;
 
 		public AchievementsServerListener(Achievements plugin) {
@@ -72,27 +74,18 @@ public class Achievements extends JavaPlugin {
 		}
 
 		@Override
-		public void onPluginEnabled(PluginEvent event) {
+		public void onPluginEnable(PluginEnableEvent event) {
 			if (event.getPlugin().getDescription().getName().equals("Stats")) {
 				if (this.plugin.enabled) {
 					this.plugin.Disable();
 				}
-				this.plugin.CheckStatsPlugin();
-				this.plugin.Enable();
-			}
-		}
-
-		@Override
-		public void onPluginDisabled(PluginEvent event) {
-			if (event.getPlugin().getDescription().getName().equals("Stats")) {
-				if (this.plugin.enabled) {
-					this.plugin.Disable();
+				if(this.plugin.checkStatsPlugin()) {
+					this.plugin.Enable();	
 				}
 			}
 		}
 	}
-
-	boolean CheckStatsPlugin() {
+	public boolean checkStatsPlugin() {
 		if (statsInstance != null)
 			return true;
 		Plugin plug = getServer().getPluginManager().getPlugin("Stats");
@@ -103,12 +96,15 @@ public class Achievements extends JavaPlugin {
 			return false;
 		}
 		statsInstance = (Stats) plug;
+		if(!statsInstance.enabled||statsInstance.updated) {
+			return false;
+		}
 		LogInfo("Found required plugin: " + plug.getDescription().getName());
 		return true;
 	}
 
 	public Stats Stats() {
-		CheckStatsPlugin();
+		checkStatsPlugin();
 		return statsInstance;
 	}
 
@@ -118,10 +114,12 @@ public class Achievements extends JavaPlugin {
 		this.listLocation = properties.getString("achievements-list", "achievements.txt", "");
 		this.delay = (long) properties.getInt("achievements-delay", 60, "");
 		this.color = ("&" + properties.getString("achievements-color", "b", ""));
+		this.allowConsoleCommands = properties.getBoolean("achievements-console-commands", true, "allow /-commands, executed as CommandSender=console, * is replaced with players name. example: '/kick * you got a punish achievement'");
 		this.obtainedColor = ("&" + properties.getString("achievements-obtainedcolor", "a", ""));
 		this.useSQL = properties.getBoolean("achievements-use-sql", false, "");
 		useSQLDefinitions = properties.getBoolean("achievements-definintions-sql", false, "set to true to use definitions from sql-table");
-		this.useCraftIRC = properties.getBoolean("achievements-craftirc", CheckCraftIRC(), "");
+		this.useCraftIRC = properties.getBoolean("achievements-craftirc", checkCraftIRC(), "");
+		ircTags.clear();
 		for (String tag : properties.getString("achievements-craftirc-tags", "default", "by comma seperated CraftIRC tags").split(",")) {
 			ircTags.add(tag.trim());
 		}
@@ -138,11 +136,11 @@ public class Achievements extends JavaPlugin {
 		this.formatAchDetail.add(properties.getString("achievements-format-detail6", "", ""));
 		this.formatAchDetail.add(properties.getString("achievements-format-detail7", "", ""));
 		this.formatAchDetail.add(properties.getString("achievements-format-detail8", "", ""));
-		this.dbAchievementsTable = properties.getString("sql-table-achievements", "achievements", "");
-		this.dbPlayerAchievementsTable = properties.getString("sql-table-playerachievements", "playerachievements", "");
+		Achievements.dbAchievementsTable = properties.getString("sql-table-achievements", "achievements", "");
+		dbPlayerAchievementsTable = properties.getString("sql-table-playerachievements", "playerachievements", "");
 		properties.save();
 
-		if (!CheckStatsPlugin()) {
+		if (!checkStatsPlugin()) {
 			Disable();
 			return false;
 		}
@@ -152,9 +150,6 @@ public class Achievements extends JavaPlugin {
 		return true;
 	}
 
-	protected Connection getSQLConnection() throws SQLException {
-		return StatsSQLConnectionManager.getConnection();
-	}
 
 	public int getIndexOfAch(String achName) {
 		int index = 0;
@@ -179,10 +174,9 @@ public class Achievements extends JavaPlugin {
 				return;
 			}
 		}
-		if (!CheckStatsPlugin()) {
+		if (!checkStatsPlugin()) {
 			AchievementsServerListener srvListener = new AchievementsServerListener(this);
 			getServer().getPluginManager().registerEvent(Event.Type.PLUGIN_ENABLE, srvListener, Priority.Normal, this);
-			getServer().getPluginManager().registerEvent(Event.Type.PLUGIN_DISABLE, srvListener, Priority.Normal, this);
 		} else {
 			Enable();
 		}
@@ -193,64 +187,52 @@ public class Achievements extends JavaPlugin {
 		formatAchList = new ArrayList<String>();
 		achievementList = new HashMap<String, AchievementListData>();
 		playerAchievements = new HashMap<String, PlayerAchievement>();
+		checkStatsPlugin();
+		checkCraftIRC();
+		checkGroupManager();
+		
 		if (!loadConfig())
 			return;
 
 		if (useSQL) {
-
-			try {
-				Class.forName("com.mysql.jdbc.Driver");
-				if (getSQLConnection() == null) {
-					LogError("MySQL-Connection could not be established");
-					return;
-				}
-				if (!checkSchema()) {
-					log.log(Level.SEVERE, this.getClass().getName() + ": Could not create table. Stats is disabled");
-					return;
-				}
-			} catch (SQLException e) {
+			if (StatsSQLConnectionManager.getConnection(true) == null) {
 				LogError("MySQL-Connection could not be established");
-				e.printStackTrace();
-			} catch (ClassNotFoundException e) {
-				LogError("MySQL-Connection could not be established");
-				e.printStackTrace();
+				return;
+			}
+			if (!checkSchema()) {
+				LogError("Could not create tables. Achievements is disabled");
+				return;
 			}
 		}
-		achievementList = AchievementsLoader.LoadAchievementsList(this, getDataFolder().getPath(), listLocation);
-		if (achievementList == null || achievementList.isEmpty()) {
-			Achievements.log.info(Achievements.logprefix + " " + (useSQLDefinitions ? "table " + dbAchievementsTable : listLocation) + " is empty");
-			Disable();
-			return;
-		}
-		Achievements.log.info(Achievements.logprefix + " loaded " + achievementList.size() + " achievements definitions");
-		this.enabled = true;
+		reloadList();
 		listener = new AchievementsListener();
 		getServer().getPluginManager().registerEvent(Event.Type.PLAYER_JOIN, listener, Priority.Normal, this);
 		getServer().getPluginManager().registerEvent(Event.Type.PLAYER_QUIT, listener, Priority.Normal, this);
-		LogInfo(name + " " + version + " Plugin Enabled");
+		LogInfo(getDescription().getName() + " " + getDescription().getVersion() + " Plugin Enabled");
 
+
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, new AchievementsCheckerTask(this), delay * 20, delay * 20);
+	}
+	public void reloadList() {
+		this.enabled = false;
+		achievementList = AchievementsLoader.LoadAchievementsList(this, getDataFolder().getPath(), listLocation);
+		if (achievementList == null || achievementList.isEmpty()) {
+			LogInfo((useSQLDefinitions ? "table " + dbAchievementsTable : listLocation) + " is empty");
+			Disable();
+			return;
+		}
+		LogInfo("loaded " + achievementList.size() + " achievements definitions");
+		playerAchievements = new HashMap<String, PlayerAchievement>();
 		for (Player p : getServer().getOnlinePlayers()) {
 			load(p);
 		}
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, new CheckerTask(this), delay * 20, delay * 20);
+		this.enabled = true;
 	}
 
-	private static class CheckerTask implements Runnable {
-		private Achievements achievements;
-
-		CheckerTask(Achievements plugin) {
-			achievements = plugin;
-		}
-
-		public void run() {
-			achievements.checkAchievements();
-		}
-	}
 
 	public void Disable() {
 
 		if (enabled) {
-			checkAchievements();
 			enabled = false;
 			getServer().getScheduler().cancelTasks(this);
 			playerAchievements = null;
@@ -259,11 +241,14 @@ public class Achievements extends JavaPlugin {
 	}
 
 	public void onDisable() {
+		if(checkStatsPlugin()) {
+			Disable();
+		}
 	}
 
 	public CraftIRC craftirc = null;
 
-	public boolean CheckCraftIRC() {
+	public boolean checkCraftIRC() {
 		if (craftirc != null)
 			return true;
 		Plugin plug = this.getServer().getPluginManager().getPlugin("CraftIRC");
@@ -276,21 +261,21 @@ public class Achievements extends JavaPlugin {
 		return false;
 	}
 
-	protected AchievementListData getAchievement(String name) {
+	public AchievementListData getAchievement(String name) {
 		return achievementList.get(name);
 	}
 
 	public Achievements() {
 	}
 
-	private void checkAchievements() {
-		if (!enabled)
+	public void checkAchievements() {
+		if (!enabled ||!checkStatsPlugin() || Stats().enabled == false)
 			return;
 
 		if (StatsSettings.debugOutput)
-			log.info(logprefix + "checking achievements...");
+			LogInfo("checking achievements...");
 		for (Player p : getServer().getOnlinePlayers()) {
-			if (!Stats().Perms().permission(p, "/ach"))
+			if (!Stats().Perms().permission(p, "achievements.check"))
 				continue;
 			if (!playerAchievements.containsKey(p.getName()))
 				load(p);
@@ -299,7 +284,7 @@ public class Achievements extends JavaPlugin {
 				AchievementListData ach = achievementList.get(name2);
 				if (ach == null || !ach.isEnabled())
 					continue;
-				if (!ach.conditions.meets(this, pa))
+				if (!ach.conditions.meets(this, p, pa))
 					continue;
 				int playerValue = Stats().get(p.getName(), ach.getCategory(), ach.getKey());
 
@@ -341,10 +326,10 @@ public class Achievements extends JavaPlugin {
 		}
 	}
 
-	private void load(Player player) {
-		if (!Stats().Perms().permission(player, "/ach")) {
+	public void load(Player player) {
+		if (!Stats().Perms().permission(player, "achievements.check")) {
 			if (StatsSettings.debugOutput)
-				LogInfo("player " + player.getName() + " has no /ach permission. Not loading/logging actions");
+				LogInfo("player " + player.getName() + " has no achievements.check permission. Not loading");
 			return;
 		}
 		if (playerAchievements.containsKey(player.getName())) {
@@ -356,7 +341,7 @@ public class Achievements extends JavaPlugin {
 		if (useSQL) {
 			String location = getDataFolder().getPath() + File.separator + player.getName() + ".txt";
 			File fold = new File(location);
-			pa = new PlayerAchievementSQL(player.getName(), this);
+			pa = new PlayerAchievementSQL(player.getName());
 			if (fold.exists()) {
 				PlayerAchievement paold = new PlayerAchievementFile(getDataFolder().getPath(), player.getName());
 				paold.load();
@@ -374,7 +359,7 @@ public class Achievements extends JavaPlugin {
 
 	}
 
-	private void unload(String player) {
+	public void unload(String player) {
 		if (!playerAchievements.containsKey(player)) {
 			return;
 		}
@@ -384,59 +369,32 @@ public class Achievements extends JavaPlugin {
 	}
 
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
-		if (!(sender instanceof Player))
-			return false;
-		Player player = (Player) sender;
+		if(sender instanceof Player) {
+			final Player player = (Player)sender;
+			load(player);
+			if (cmd.getName().equals("achievements") && Stats().Perms().permission(sender, "achievements.view.own")) {
+				if (playerAchievements == null || playerAchievements.get(player.getName()) == null) {
+					AchMessaging.send(player, ChatColor.LIGHT_PURPLE + "You have no achievements.");
+					return true;
+				}
+				AchLister.SendDoneAchList(this, player, args);
+				return true;
+			}
 
-		if (!Stats().Perms().permission(player, "/ach")) {
-			AchMessaging.send(player, ChatColor.RED + "You don't have sufficient permission.");
-			return true;
-		}
-		load(player);
-		if (cmd.getName().equals("achievements")) {
-			if (playerAchievements == null || playerAchievements.get(player.getName()) == null) {
-				AchMessaging.send(player, ChatColor.LIGHT_PURPLE + "You have no achievements.");
+			if (cmd.getName().equals("listachievements") && Stats().Perms().permission(sender, "achievements.view.list")) {
+				AchLister.SendAchList(this, player, args);
 				return true;
 			}
-			AchLister.SendDoneAchList(this, player, args);
-			return true;
 		}
-
-		if (cmd.getName().equals("listachievements")) {
-			if (!Stats().Perms().permission(player, "/listach")) {
-				AchMessaging.send(player, ChatColor.RED + "You don't have sufficient permission.");
-				return true;
-			}
-			AchLister.SendAchList(this, player, args);
-			return true;
-		}
-		if (cmd.getName().equals("checkachievements")) {
-			if (!Stats().Perms().permission(player, "/achadmin")) {
-				AchMessaging.send(player, ChatColor.RED + "You don't have sufficient permission.");
-				return true;
-			}
+		if (cmd.getName().equals("checkachievements") && Stats().Perms().permission(sender, "achievements.admin.check")) {
 			checkAchievements();
-			AchMessaging.send(player, ChatColor.LIGHT_PURPLE + "Achievements updated.");
+			sender.sendMessage(ChatColor.LIGHT_PURPLE + "Achievements updated.");
 			return true;
-		} else if (cmd.getName().equals("reloadachievements")) {
-			if (!Stats().Perms().permission(player, "/achadmin")) {
-				AchMessaging.send(player, ChatColor.RED + "You don't have sufficient permission.");
-				return true;
-			}
-
-			enabled = false;
-			Disable();
-			Enable();
-			AchMessaging.send(player, ChatColor.LIGHT_PURPLE + "Achievements reloaded.");
+		} else if (cmd.getName().equals("reloadachievements") && Stats().Perms().permission(sender, "achievements.admin.reload")) {
+			reloadList();
+			sender.sendMessage(ChatColor.LIGHT_PURPLE + "Achievements reloaded.");
 			return true;
-		} else if (cmd.getName().equals("deleteachievements")) {
-			if (!Stats().Perms().permission(player, "/achadmin")) {
-				AchMessaging.send(player, ChatColor.RED + "You don't have sufficient permission.");
-				return true;
-			}
-			AchMessaging.send(player, ChatColor.LIGHT_PURPLE + "Achievements reloaded.");
-			return true;
-		}
+		} 
 		return false;
 	}
 
@@ -444,12 +402,12 @@ public class Achievements extends JavaPlugin {
 		return yaml;
 	}
 
-	private class AchievementsListener extends PlayerListener {
-		public void onPlayerJoin(PlayerEvent event) {
+	public class AchievementsListener extends PlayerListener {
+		public void onPlayerJoin(PlayerJoinEvent event) {
 			load(event.getPlayer());
 		}
 
-		public void onPlayerQuit(PlayerEvent event) {
+		public void onPlayerQuit(PlayerQuitEvent event) {
 			unload(event.getPlayer().getName());
 		}
 	}
@@ -460,7 +418,7 @@ public class Achievements extends JavaPlugin {
 		ResultSet rs = null;
 		boolean result = false;
 		try {
-			conn = getSQLConnection();
+			conn = StatsSQLConnectionManager.getConnection(true);
 			DatabaseMetaData dbm = conn.getMetaData();
 			rs = dbm.getTables(null, null, dbPlayerAchievementsTable, null);
 			if (!rs.next()) {
@@ -484,7 +442,7 @@ public class Achievements extends JavaPlugin {
 							result = true;
 						} catch (SQLException e_) {
 							LogError("UPGRADING FAILED");
-							log.info(logprefix + e_.getMessage() + e_.getSQLState());
+							LogError(e_.getMessage() + e_.getSQLState());
 							result = false;
 						}
 					} else {
@@ -526,6 +484,8 @@ public class Achievements extends JavaPlugin {
 		return result;
 	}
 
+
+
 	public static void LogError(String string) {
 		Achievements.log.log(Level.SEVERE, Achievements.logprefix + " " + string);
 	}
@@ -536,7 +496,7 @@ public class Achievements extends JavaPlugin {
 
 	private GroupManager groupManagerInstance = null;
 
-	boolean CheckGroupManager() {
+	boolean checkGroupManager() {
 		if (groupManagerInstance != null)
 			return true;
 		Plugin plug = this.getServer().getPluginManager().getPlugin("GroupManager");
@@ -549,12 +509,18 @@ public class Achievements extends JavaPlugin {
 	}
 
 	public GroupManager groupManager() {
-		CheckGroupManager();
+		checkGroupManager();
 		return groupManagerInstance;
 	}
 
 	public void onLoad() {
-		// TODO Auto-generated method stub
 
+	}
+
+	/**
+	 * @return the allowNativeCommands
+	 */
+	public boolean consoleCommandsAllowed() {
+		return allowConsoleCommands;
 	}
 }

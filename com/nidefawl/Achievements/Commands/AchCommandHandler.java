@@ -21,6 +21,7 @@ public class AchCommandHandler {
 		this.plugin = plugin;
 		String[] split = commands.split(";");
 		for (String c : split) {
+			c = c.replaceAll("<semicolon>", ":");
 			if (c.length() <= 1)
 				continue;
 			String[] s = c.split(" ");
@@ -86,14 +87,36 @@ public class AchCommandHandler {
 				AchCommandItem.handleCommand(plugin, player, s);
 				continue;
 			}
-
 			if (s[0].equalsIgnoreCase("group")) {
 				if (StatsSettings.debugOutput)
 					Achievements.LogInfo("adding '" + player.getName() + "' to group (" + s[0] + ")");
 				AchCommandGroup.handleCommand(plugin, player, s);
 				continue;
 			}
-
+			if (s[0].equalsIgnoreCase("addsubgroup")) {
+				if (StatsSettings.debugOutput)
+					Achievements.LogInfo("adding '" + player.getName() + "' to subgroup (" + s[0] + ")");
+				AchCommandAddSubGroup.handleCommand(plugin, player, s);
+				continue;
+			}
+			if (s[0].equalsIgnoreCase("removesubgroup")) {
+				if (StatsSettings.debugOutput)
+					Achievements.LogInfo("removing '" + player.getName() + "' from subgroup (" + s[0] + ")");
+				AchCommandRemoveSubGroup.handleCommand(plugin, player, s);
+				continue;
+			}
+			if (s[0].equalsIgnoreCase("addpermission")) {
+				if (StatsSettings.debugOutput)
+					Achievements.LogInfo("giving '" + player.getName() + "' permission (" + s[0] + ")");
+				AchCommandAddPermission.handleCommand(plugin, player, s);
+				continue;
+			}
+			if (s[0].equalsIgnoreCase("removepermission")) {
+				if (StatsSettings.debugOutput)
+					Achievements.LogInfo("'" + player.getName() + "' remove permission (" + s[0] + ")");
+				AchCommandRemovePermission.handleCommand(plugin, player, s);
+				continue;
+			}
 			if (s[0].equalsIgnoreCase("money")) {
 				if (StatsSettings.debugOutput)
 					Achievements.LogInfo("giving '" + player.getName() + "' money (" + s[0] + ")");
@@ -104,6 +127,17 @@ public class AchCommandHandler {
 				if (StatsSettings.debugOutput)
 					Achievements.LogInfo("warping '" + player.getName() + "' to (" + s[0] + ")");
 				AchCommandWarp.handleCommand(plugin, player, s);
+				continue;
+			}
+			if (s[0].startsWith("/")) {
+				if(plugin.consoleCommandsAllowed()) { 
+					if (StatsSettings.debugOutput)
+						Achievements.LogInfo("warping '" + player.getName() + "' to (" + s[0] + ")");
+					AchCommandNativeCommand.handleCommand(plugin, player, s);
+				} else {
+					Achievements.LogInfo("Could not execute "+s[0]);
+					Achievements.LogInfo("Console commands are disabled. check achievements.properties!");
+				}
 				continue;
 			}
 			Achievements.LogError("Unknown command " + s[0]);

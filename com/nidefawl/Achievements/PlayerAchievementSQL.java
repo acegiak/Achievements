@@ -1,28 +1,23 @@
 package com.nidefawl.Achievements;
 
 import java.util.Iterator;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 import java.sql.*;
 
-public class PlayerAchievementSQL extends PlayerAchievement {
-	static final Logger log = Logger.getLogger("Minecraft");
-	public final String logprefix = "[Achievements-" + Achievements.version + "]";
-	private Achievements plugin = null;
+import com.nidefawl.Stats.datasource.StatsSQLConnectionManager;
 
-	PlayerAchievementSQL(String name, Achievements plugin) {
+public class PlayerAchievementSQL extends PlayerAchievement {
+	public PlayerAchievementSQL(String name) {
 		super(name);
-		this.plugin = plugin;
 	}
 
 	@Override
-	protected void save() {
+	public void save() {
 
 		Connection conn = null;
 		PreparedStatement ps = null;
 
 		try {
-			conn = plugin.getSQLConnection();
+			conn = StatsSQLConnectionManager.getConnection(true);
 			conn.setAutoCommit(false);
 
 			Iterator<String> achIter = achievements.keySet().iterator();
@@ -32,7 +27,7 @@ public class PlayerAchievementSQL extends PlayerAchievement {
 				if (!ach.modified)
 					continue;
 
-				ps = conn.prepareStatement("INSERT INTO " + plugin.dbPlayerAchievementsTable + " (player,achievement,count) VALUES(?,?,?) ON DUPLICATE KEY UPDATE count=?", Statement.RETURN_GENERATED_KEYS);
+				ps = conn.prepareStatement("INSERT INTO " + Achievements.dbPlayerAchievementsTable + " (player,achievement,count) VALUES(?,?,?) ON DUPLICATE KEY UPDATE count=?", Statement.RETURN_GENERATED_KEYS);
 				ps.setString(1, name);
 				ps.setString(2, achName);
 				ps.setInt(3, ach.getCount());
@@ -41,7 +36,7 @@ public class PlayerAchievementSQL extends PlayerAchievement {
 			}
 			conn.commit();
 		} catch (SQLException ex) {
-			log.log(Level.SEVERE, logprefix + " SQL exception", ex);
+			Achievements.LogError("SQL exception "+ ex);
 		} finally {
 			try {
 				if (ps != null)
@@ -49,27 +44,27 @@ public class PlayerAchievementSQL extends PlayerAchievement {
 				if (conn != null)
 					conn.close();
 			} catch (SQLException ex) {
-				log.log(Level.SEVERE, logprefix + " SQL exception on close", ex);
+				Achievements.LogError("SQL exception (on close) "+ ex);
 			}
 		}
 	}
 
 	@Override
-	protected void load() {
+	public void load() {
 
 		Connection conn = null;
 		PreparedStatement ps = null;
 		ResultSet rs = null;
 
 		try {
-			conn = plugin.getSQLConnection();
-			ps = conn.prepareStatement("SELECT * from " + plugin.dbPlayerAchievementsTable + " where player = ?");
+			conn = StatsSQLConnectionManager.getConnection(true);
+			ps = conn.prepareStatement("SELECT * from " + Achievements.dbPlayerAchievementsTable + " where player = ?");
 			ps.setString(1, name);
 			rs = ps.executeQuery();
 			while (rs.next())
 				put(rs.getString("achievement"), rs.getInt("count"));
 		} catch (SQLException ex) {
-			log.log(Level.SEVERE, logprefix + " SQL exception", ex);
+			Achievements.LogError("SQL exception "+ ex);
 		} finally {
 			try {
 				if (rs != null)
@@ -79,7 +74,7 @@ public class PlayerAchievementSQL extends PlayerAchievement {
 				if (conn != null)
 					conn.close();
 			} catch (SQLException ex) {
-				log.log(Level.SEVERE, logprefix + " SQL exception on close", ex);
+				Achievements.LogError("SQL exception (on close) "+ ex);
 			}
 		}
 	}

@@ -7,7 +7,7 @@ public class Achievement {
 	private int count;
 	static final Logger log = Logger.getLogger("Minecraft");
 
-	Achievement() {
+	public Achievement() {
 		count = 0;
 		modified = false;
 	}

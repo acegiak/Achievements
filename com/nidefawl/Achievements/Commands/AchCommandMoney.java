@@ -22,14 +22,14 @@ public class AchCommandMoney {
 		}
 		String currency = "money";
 		Plugin plugiConomy = plugin.getServer().getPluginManager().getPlugin("iConomy");
-		Plugin plugEssentialsEco = plugin.getServer().getPluginManager().getPlugin("EssentialsEco");
+		Plugin plugEssentials = plugin.getServer().getPluginManager().getPlugin("Essentials");
 		if (plugiConomy != null && plugiConomy.isEnabled()) {
 			currency = iConomy.getBank().getCurrency();
 			if (iConomy.getBank().getAccount(player.getName()) != null) {
 				iConomy.getBank().getAccount(player.getName()).add(amount);
 				iConomy.getBank().getAccount(player.getName()).save();
 			}
-		} else if (plugEssentialsEco != null && plugEssentialsEco.isEnabled()) {
+		} else if (plugEssentials != null && plugEssentials.isEnabled()) {
 			try {
 				com.earth2me.essentials.User user = com.earth2me.essentials.User.get(player);
 				if (user != null) {

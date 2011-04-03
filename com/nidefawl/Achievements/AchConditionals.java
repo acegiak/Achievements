@@ -3,6 +3,9 @@ package com.nidefawl.Achievements;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
+import org.bukkit.entity.Player;
+
+
 public class AchConditionals {
 	private boolean empty;
 	protected ArrayList<String> condList = new ArrayList<String>();
@@ -16,6 +19,7 @@ public class AchConditionals {
 
 		String[] split = conditions.split(";");
 		for (String c : split) {
+			c = c.replaceAll("<semicolon>", ":");
 			if (c.length() <= 1)
 				continue;
 			this.condList.add(c);
@@ -27,7 +31,7 @@ public class AchConditionals {
 		return this.empty;
 	}
 
-	public boolean meets(Achievements plugin, PlayerAchievement pa) {
+	public boolean meets(Achievements plugin, Player p, PlayerAchievement pa) {
 		if (isEmpty())
 			return true;
 
@@ -41,6 +45,28 @@ public class AchConditionals {
 				cond = c.substring(1);
 			} else {
 				cond = c;
+			}
+			if(cond.contains("group")&&cond.split(" ").length>1) {
+				String groupName = cond.split(" ")[1];
+				if(not && (!plugin.Stats().Perms().inGroup(p, groupName))) {
+					meets = true;
+					continue;
+				}
+				if(!not && (plugin.Stats().Perms().inGroup(p, groupName))) {
+					meets = true;
+					continue;
+				}
+			}
+			if(cond.contains("permission")&&cond.split(" ").length>1) {
+				String permission = cond.split(" ")[1];
+				if(not && (!plugin.Stats().Perms().permission(p, permission))) {
+					meets = true;
+					continue;
+				}
+				if(!not && (plugin.Stats().Perms().permission(p, permission))) {
+					meets = true;
+					continue;
+				}
 			}
 			AchievementListData ach = plugin.getAchievement(cond);
 			if (ach == null || pa == null)
